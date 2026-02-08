@@ -95,53 +95,55 @@ RESPONSE_SCHEMA = {
 
 SYSTEM_PROMPT = """You extract two things from federal job listings:
 
-1. **coding_tools**: Specific, named programming languages and software tools that involve writing code.
-2. **coding_tasks**: Activities described in the listing that specifically require writing or maintaining code.
+1. **coding_tools**: Specific, named programming languages and software tools mentioned BY NAME in the text.
+2. **coding_tasks**: Short phrases QUOTED DIRECTLY from the listing that describe coding or programming work.
 
-THE KEY QUESTION: Does this job require someone to actually write code? We are trying to distinguish roles that involve hands-on programming from roles that merely use data or technology.
+CRITICAL RULES:
+- Only extract things that ACTUALLY APPEAR in the text. Every tool name must be a direct match to text in the listing. Every task must be a short phrase taken directly from the listing, not your paraphrase or summary.
+- Do NOT infer, paraphrase, or generalize. If the listing says "develops and maintains web applications using ASP.NET", the tool is "ASP.NET" and the task is "develops and maintains web applications" — do NOT output "software development" or "web development" as tasks unless those exact words appear.
+- Do NOT output category names as values (e.g. never output "software_development", "data_engineering", "modeling statistics", "devops sysadmin").
 
 ---
 
-CODING TOOLS — MUST be a specific named product or language. INCLUDE:
+CODING TOOLS — MUST be a specific named product or language that appears in the text. INCLUDE:
 - Programming languages: Python, R, JavaScript, Java, C++, SQL, SAS, Stata, MATLAB, Go, Rust, Shell/Bash, etc.
-- Statistical/analytical software that involves writing code: SAS, Stata, SPSS (syntax), R, etc.
-- DevOps/infrastructure: Docker, Kubernetes, Terraform, Ansible, Jenkins, Git, AWS CLI, etc.
-- Frameworks/libraries: React, Django, Flask, TensorFlow, PyTorch, Pandas, NumPy, Spring, .NET, etc.
+- Statistical software: SAS, Stata, SPSS, SUDAAN, R, etc.
+- DevOps tools: Docker, Kubernetes, Terraform, Ansible, Jenkins, Git, etc.
+- Frameworks/libraries: React, Django, Flask, TensorFlow, PyTorch, Pandas, NumPy, Spring, .NET, ASP.NET, etc.
 - Databases (only if specifically named): SQL Server, PostgreSQL, MySQL, MongoDB, Oracle, DynamoDB, etc.
-- Other coding tools: Jupyter, VS Code, RStudio, GitHub, GitLab, etc.
-- Markup/config that's code-adjacent: HTML, CSS, XML, YAML, JSON
+- Development tools: Jupyter, VS Code, RStudio, GitHub, GitLab, etc.
 
 CODING TOOLS — DO NOT INCLUDE:
-- Generic categories: "statistical software", "database", "spreadsheets", "relational databases", "data visualization", "programming languages", "coding tools". Only include specific named tools.
-- Microsoft Excel — NEVER include Excel, even "advanced Excel", unless VBA/macros are explicitly specified
+- Microsoft Excel, Power BI, Tableau, Alteryx — NEVER include these
+- SharePoint — NEVER include SharePoint, it is not a coding tool
 - Microsoft Office (Word, PowerPoint, Outlook)
-- Power BI — NEVER include Power BI, it is a drag-and-drop BI tool, not a coding tool
-- Tableau, Alteryx, and other BI/visualization tools used without code
 - Google Workspace (Docs, Sheets, Slides)
-- Adobe Acrobat, SharePoint, Teams, Zoom, Slack
-- General project management tools (MS Project, Smartsheet) unless API/scripting mentioned
+- Adobe Acrobat, Teams, Zoom, Slack
+- Generic cloud platform names UNLESS the listing actually names them as a tool used in the role
+- Hardware, building control systems, or non-software tools (e.g. "Johnson Controls", HVAC systems)
+- Generic categories: "statistical software", "database", "spreadsheets", "programming languages", "coding tools"
+- Project management tools (MS Project, Smartsheet) unless API/scripting mentioned
 
 ---
 
-CODING TASKS — INCLUDE only activities that require actually writing or maintaining code:
-- Data engineering: ETL, data pipeline development, database administration, data wrangling with code
-- Statistics/modeling with code: statistical modeling, machine learning, predictive modeling, NLP, epidemiological modeling, biostatistics (only when the listing implies coding, not just interpreting results)
-- Software: software development, web development, API development, scripting, automation, code review, testing
-- DevOps/infra: system administration, cloud infrastructure, CI/CD, network engineering
-- Security: vulnerability assessment, penetration testing, security monitoring
-- Other technical: bioinformatics, geospatial analysis (with code), genomic sequencing analysis, scientific computing
+CODING TASKS — Short phrases taken DIRECTLY from the listing text. Include phrases that describe:
+- Writing, developing, or maintaining software or code
+- Programming, scripting, or automation
+- Database development or query writing
+- Statistical programming or computational modeling
+- Building data pipelines, ETL processes
+- Machine learning, NLP, or AI development
 
-CODING TASKS — DO NOT INCLUDE. These are common in CDC listings but do NOT imply coding:
-- General data work that doesn't require code: data collection, data interpretation, data synthesis, data compilation, data presentation, data quality assessment, data management (unless it specifies using code/databases)
-- Analysis that doesn't require code: program evaluation, policy analysis, budget analysis, cost-benefit analysis, qualitative analysis, epidemiologic study design, literature review, outbreak investigations, surveillance (unless it specifies statistical software or programming)
-- General management/admin: project management, budget management, policy development, report writing
-- Communication: presenting findings, writing reports, stakeholder engagement
+CODING TASKS — DO NOT INCLUDE:
+- Your own paraphrases or summaries. The task text must appear in the listing.
+- Generic descriptions you inferred: "data engineering", "data pipeline development", "machine learning model development", "data wrangling with code", "data analysis with code"
+- Non-coding work: data collection, data interpretation, program evaluation, policy analysis, budget analysis, report writing, surveillance, literature review
 
 ---
 
 Return empty lists if nothing matches — most CDC jobs do NOT involve coding and should have empty lists.
 
-Normalize names to lowercase with spaces (e.g. 'data analysis' not 'Data analysis' or 'data_analysis'). Tool names should be properly capitalized (e.g. 'Python' not 'python', 'SQL Server' not 'sql server')."""
+Tool names should match the capitalization used in the listing (e.g. 'Python', 'SQL Server', 'SAS'). Task phrases should be quoted exactly as they appear in the listing."""
 
 
 def get_scraped_jobs() -> list[Path]:
