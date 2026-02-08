@@ -5,9 +5,9 @@ One-shot analysis of CDC USAJOBS postings (2021-2025) to extract coding tools an
 ## Structure
 
 - `01_download_and_filter.py` through `05_build_web_data.py` — sequential pipeline steps
-- `run_pipeline.sh` — runs steps 2-5 end to end
+- `run_pipeline.sh` — runs steps 2-5 end to end, supports `--limit N` and resume
 - `web/index.html` — static single-page viewer (DataTables, Bootstrap 5, vanilla JS)
-- `web/data/cdc_jobs.json` — generated data file consumed by the viewer
+- `web/data/cdc_jobs.json` — generated data file consumed by the viewer, committed for Netlify
 - `data/` — local data directory (parquet, scraped text files, batch results). Gitignored.
 
 ## Key details
@@ -16,10 +16,23 @@ One-shot analysis of CDC USAJOBS postings (2021-2025) to extract coding tools an
 - OpenAI API key in `.env` as `OPENAI_API_TOKEN`
 - LLM model: `gpt-5-nano-2025-08-07` via OpenAI Batch API
 - Structured output schema defined in `03_prepare_batch.py` (RESPONSE_SCHEMA)
+- Prompt instructs model to extract direct quotes, not paraphrases
 - Web viewer is fully static — no build step, just serve `web/`
-- Column filters use DataTables column search API (no global search box)
-- `dom: 'lrtip'` in DataTable config omits the global search box
-- Tools/tasks have a `verified` field: true if the string appears in the scraped job text, false if not (shown red in the viewer)
+- Netlify config in `web/netlify.toml`, publish directory is `web/`
+- Column filters use DataTables column search API, `dom: 'lrtip'` omits global search
+- Separate "Has Tools" and "Has Tasks" columns with independent Yes/No filters
+
+## Verification and post-processing (05_build_web_data.py)
+
+- Each tool/task is checked against the scraped job text (case-insensitive, whitespace-normalized, quotes stripped)
+- Unverified items get `"verified": false` and render in red (`tag-unverified` CSS class)
+- `EXCLUDED_TOOLS` set: SharePoint, Lectora, HVAC controls (Johnson Controls GX9100, CCT, GPL, LCT)
+- `EXCLUDED_TASKS` set: generic single words (analysis, collection, processing, mining, linkage), medical "coding", HVAC tasks (ladder logic, BAS reprogramming), non-coding evaluations
+- Tools/tasks output as `{"name": "...", "verified": true/false}` objects in the JSON
+
+## Column index reference (web/index.html)
+
+0=Title, 1=Series, 2=Year, 3=Grade, 4=Location, 5=Has Tools, 6=Has Tasks, 7=Coding Tools, 8=Coding Tasks, 9=Link (not searchable)
 
 ## Future: LLM refinement pass (not yet built)
 
