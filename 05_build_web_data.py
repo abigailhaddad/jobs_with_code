@@ -18,6 +18,35 @@ RESULTS_DIR = DATA_DIR / "batch_results"
 SCRAPED_DIR = DATA_DIR / "scraped_jobs"
 WEB_DATA_DIR = Path(__file__).parent / "web" / "data"
 
+# Tools to exclude from results (not coding tools, even if mentioned in listings)
+EXCLUDED_TOOLS = {
+    "Johnson Controls GX9100",
+    "CCT",
+    "GPL",
+    "LCT",
+    "SharePoint",
+    "Lectora",
+}
+
+# Tasks to exclude (too generic, not coding, or HVAC/building automation)
+EXCLUDED_TASKS = {
+    "classification",
+    "analysis",
+    "collection",
+    "linkage",
+    "mining",
+    "processing",
+    "coding",  # in CDC context this means medical coding (ICD codes), not programming
+    "re-programming",
+    "re-programming of BAS field controller logic and supervisory controller logic",
+    "modifying hardware and software of Building Automation Systems (BACS) and Direct Digital Controls Systems (DDC)",
+    "graphical programming (such as Johnson Controls GX9100, CCT, GPL or LCT)",
+    "line coding (such as basic)",
+    "ladder logic",
+    "Analyze problems and identifies solutions.",
+    "Evaluate commercial off the shelf software and applications to determine the merits relative to meeting the organization's needs.",
+}
+
 
 def safe_str(val) -> str:
     """Convert a value to string, treating NaN/None as empty string."""
@@ -42,11 +71,23 @@ def load_scraped_text(cn: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def normalize_for_matching(s: str) -> str:
+    """Normalize a string for matching: strip quotes, collapse whitespace, unescape."""
+    import re
+    # Strip surrounding quotes the model may have added
+    s = s.strip().strip('"').strip("'").strip('"').strip('"')
+    # Unescape quotes
+    s = s.replace('\\"', '"').replace("\\'", "'")
+    # Collapse whitespace (handles newlines in scraped text)
+    s = re.sub(r'\s+', ' ', s)
+    return s.lower()
+
+
 def verify_in_text(name: str, text: str) -> bool:
-    """Check if a tool/task name appears in the scraped job text (case-insensitive)."""
+    """Check if a tool/task name appears in the scraped job text."""
     if not text or not name:
         return False
-    return name.lower() in text.lower()
+    return normalize_for_matching(name) in normalize_for_matching(text)
 
 
 def parse_locations(loc_json: str) -> str:
@@ -111,12 +152,20 @@ def main():
         tools = result.get("coding_tools", [])
         tasks = result.get("coding_tasks", [])
 
-        tool_names = [t["name"] for t in tools]
-        task_names = [t["name"] if "name" in t else t.get("task", "") for t in tasks]
+        tool_names = [t["name"] for t in tools if t.get("name") not in EXCLUDED_TOOLS]
+        task_names = [(t["name"] if "name" in t else t.get("task", "")) for t in tasks
+                      if (t.get("name") or t.get("task", "")) not in EXCLUDED_TASKS]
+
+        def clean_name(s: str) -> str:
+            """Strip surrounding quotes the model may have added."""
+            return s.strip().strip('"').strip("'").strip('\u201c').strip('\u201d')
 
         # Verify each tool/task against scraped text
         verified_tools = []
         for name in tool_names:
+            name = clean_name(name)
+            if not name:
+                continue
             verified = verify_in_text(name, scraped_text)
             verified_tools.append({"name": name, "verified": verified})
             if not verified:
@@ -125,6 +174,9 @@ def main():
 
         verified_tasks = []
         for name in task_names:
+            name = clean_name(name)
+            if not name:
+                continue
             verified = verify_in_text(name, scraped_text)
             verified_tasks.append({"name": name, "verified": verified})
             if not verified:
