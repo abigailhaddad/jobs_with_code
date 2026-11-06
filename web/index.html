@@ -45,9 +45,11 @@
         /* Tags */
         .tag { display: inline-block; padding: 2px 8px; margin: 1px 2px; border-radius: 12px; font-size: 11px; font-weight: 500; white-space: nowrap; }
         .tag-tool { background: #e8f5e9; color: #2e7d32; }
-        .tag-task { background: #e3f2fd; color: #1565c0; }
+        .tag-task { background: #e3f2fd; color: #1565c0; white-space: normal; }
         .tag-unverified { background: #ffebee; color: #c62828; }
         .tag-none { color: #bdbdbd; font-style: italic; font-size: 12px; }
+        /* the table is wider than a phone: scroll it inside its own box, not the page */
+        @media (max-width: 768px) { .table-responsive { overflow-x: auto !important; } }
 
         a.job-link { color: var(--cdc-teal); text-decoration: none; }
         a.job-link:hover { text-decoration: underline; }
