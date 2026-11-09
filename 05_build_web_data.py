@@ -183,10 +183,12 @@ def main():
                 unverified_count += 1
             total_checked += 1
 
-        for t in tool_names:
+        # Count the same cleaned names that are displayed on each entry, so the
+        # top lists / unique counts match the entries (quote variants merge).
+        for t in (v["name"] for v in verified_tools):
             all_tools.add(t)
             tools_counter[t] = tools_counter.get(t, 0) + 1
-        for t in task_names:
+        for t in (v["name"] for v in verified_tasks):
             all_tasks.add(t)
             tasks_counter[t] = tasks_counter.get(t, 0) + 1
 
@@ -213,7 +215,7 @@ def main():
             "url": safe_str(row.get("usajobs_url")) or f"https://www.usajobs.gov/job/{cn}",
             "coding_tools": verified_tools,
             "coding_tasks": verified_tasks,
-            "has_coding": len(tools) > 0 or len(tasks) > 0,
+            "has_coding": len(verified_tools) > 0 or len(verified_tasks) > 0,
             "has_result": cn in result_files,
         }
         entries.append(entry)
